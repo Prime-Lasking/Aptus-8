@@ -17,9 +17,7 @@
 | 0x10   | ADD      | A = A + B    | `0x10` → A = A + B | 1 |
 | 0x11   | SUB      | A = A - B    | `0x11` → A = A - B | 1 |
 | 0x20   | JMP addr | Jump to address | `0x20 0x12 0x34` → PC = 0x1234 | 3 |
-| 0x30   | STA addr | Store A to memory | `0x30 0x10` → [0x10] = A | 3 |
-| 0x31   | STB addr | Store B to memory | `0x31 0x10` → [0x10] = B | 3 |
-| 0x32   | STC addr | Store C to memory | `0x32 0x10` → [0x10] = C | 3 |
+| 0x30   | store reg addr | Store reg to memory | `0x30 reg 0x10` → [0x10] = reg | 3 |
 | 0x40   | PRINT addr| Print memory value | `0x40 0x10` → prints [0x10] | 4 |
 | 0xFF   | HALT     | Stop execution | `0xFF` → stops CPU | 1 |
 
@@ -34,7 +32,7 @@ Each instruction's cycle count is determined by:
 Example timing breakdown:
 - `mov a imm`: 2 cycles (1 opcode + 1 immediate byte)
 - `ADD`: 1 cycle (1 opcode, register operation)
-- `STA addr`: 3 cycles (1 opcode + 1 address byte + 1 memory write)
+- `store b addr`: 3 cycles (1 opcode + 1 address byte + 1 memory write)
 - `PRINT addr`: 4 cycles (1 opcode + 1 address byte + 1 memory read + 1 I/O)
 
 ### Assembly Syntax
@@ -46,12 +44,12 @@ Example timing breakdown:
 Example:
 ```asm
 // This is a single-line comment
-LDA 0x0A    // Load 10 into A
+mov a 0x0A    // Load 10 into A
 
 /* This is a
    multi-line
    comment */
-LDB 0x14    // Load 20 into B
+mov b 0x14    // Load 20 into B
 ```
 
 ### Memory Map

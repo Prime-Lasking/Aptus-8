@@ -19,9 +19,7 @@ static const InstructionDef instructions[] = {
     {"add", 0x10, 0},  // ADD
     {"sub", 0x11, 0},  // SUB
     {"jmp", 0x20, 2},  // JMP addr (2-byte address)
-    {"sta", 0x30, 1},  // STA addr
-    {"stb", 0x31, 1},  // STB addr
-    {"stc", 0x32, 1},  // STC addr
+    {"store", 0x30, 2},  // store addr
     {"print", 0x40, 1}, // PRINT addr
     {"halt", 0xFF, 0},  // HALT
     {NULL, 0, 0}  // Terminator
@@ -231,9 +229,20 @@ void execute(CPU *cpu) {
         break;
     }
 
-    case 0x30: mem_write(mem_read(cpu->PC++), cpu->A); cpu->cycles += 3; break;
-    case 0x31: mem_write(mem_read(cpu->PC++), cpu->B); cpu->cycles += 3; break;
-    case 0x32: mem_write(mem_read(cpu->PC++), cpu->C); cpu->cycles += 3; break;
+    case 0x30: {
+        uint8_t reg = mem_read(cpu->PC++);
+        uint8_t addr = mem_read(cpu->PC++);
+        switch (reg) {
+            case REG_A: mem_write(addr, cpu->A); break;
+            case REG_B: mem_write(addr, cpu->B); break;
+            case REG_C: mem_write(addr, cpu->C); break;
+            default:
+                fprintf(stderr, "Invalid register %u\n", reg);
+                break;
+        }
+        cpu->cycles += 3;
+        break;
+    }
 
     case 0x40: {
         uint8_t addr = mem_read(cpu->PC++);
