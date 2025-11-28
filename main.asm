@@ -1,0 +1,4 @@
+mov a 10
+sta 0x10
+print 0x10
+halt
