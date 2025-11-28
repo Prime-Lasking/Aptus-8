@@ -243,6 +243,7 @@ void execute(CPU *cpu) {
     }
 
     case 0xFF:
+        cpu->cycles += 1;
         printf("System exited at PC=0x%04X after %" PRIu64 " cycles\n",
             cpu->PC - 1, cpu->cycles);
         exit(0);
