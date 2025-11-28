@@ -32,7 +32,7 @@ Each instruction's cycle count is determined by:
 - **1 cycle** for I/O operations (PRINT)
 
 Example timing breakdown:
-- `reg a imm`: 2 cycles (1 opcode + 1 immediate byte)
+- `mov a imm`: 2 cycles (1 opcode + 1 immediate byte)
 - `ADD`: 1 cycle (1 opcode, register operation)
 - `STA addr`: 3 cycles (1 opcode + 1 address byte + 1 memory write)
 - `PRINT addr`: 4 cycles (1 opcode + 1 address byte + 1 memory read + 1 I/O)
