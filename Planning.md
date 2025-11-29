@@ -16,6 +16,12 @@
 | 0x01   | mov reg imm  | Load immediate into reg | `0x01 0x42` → reg = 0x42 | 2 |
 | 0x10   | ADD      | A = A + B    | `0x10` → A = A + B | 1 |
 | 0x11   | SUB      | A = A - B    | `0x11` → A = A - B | 1 |
+| 0x12   | AND      | A = A & B    | `0x12` → A = A & B | 1 |
+| 0x13   | OR       | A = A | B    | `0x13` → A = A | B | 1 |
+| 0x14   | XOR      | A = A ^ B    | `0x14` → A = A ^ B | 1 |
+| 0x15   | NOT      | A = ~A       | `0x15` → A = ~A    | 1 |
+| 0x16   | NAND     | A = ~(A & B) | `0x16` → A = ~(A & B) | 1 |
+| 0x17   | NOR      | A = ~(A | B) | `0x17` → A = ~(A | B) | 1 |
 | 0x20   | JMP addr | Jump to address | `0x20 0x12 0x34` → PC = 0x1234 | 3 |
 | 0x30   | store reg addr | Store reg to memory | `0x30 reg 0x10` → [0x10] = reg | 3 |
 | 0x40   | PRINT addr| Print memory value | `0x40 0x10` → prints [0x10] | 4 |
@@ -68,9 +74,9 @@ mov b 0x14    // Load 20 into B
   - 16-bit register pairs (e.g., HL, BC, DE)
 
 - [ ] **Bit Operations**
-  - AND, OR, XOR
-  - Bit shifts and rotates
-  - Bit test instructions
+  - [x] AND, OR, XOR, NOT, NAND, NOR
+  - [ ] Bit shifts and rotates
+  - [ ] Bit test instructions
 
 - [ ] **Control Flow**
   - Conditional jumps

@@ -18,6 +18,12 @@ static const InstructionDef instructions[] = {
     {"mov", 0x01, 2},  // mov reg, imm
     {"add", 0x10, 0},  // ADD
     {"sub", 0x11, 0},  // SUB
+    {"and", 0x12, 0},  // AND A = A & B
+    {"or",  0x13, 0},  // OR  A = A | B
+    {"xor", 0x14, 0},  // XOR A = A ^ B
+    {"not", 0x15, 0},  // NOT A = ~A
+    {"nand",0x16, 0},  // NAND A = ~(A & B)
+    {"nor", 0x17, 0},  // NOR A = ~(A | B)
     {"jmp", 0x20, 2},  // JMP addr (2-byte address)
     {"store", 0x30, 2},  // store addr
     {"print", 0x40, 1}, // PRINT addr
@@ -218,8 +224,14 @@ void execute(CPU *cpu) {
         break;
     }
 
-    case 0x10: cpu->A += cpu->B; cpu->cycles++; break;
-    case 0x11: cpu->A -= cpu->B; cpu->cycles++; break;
+    case 0x10: cpu->A += cpu->B; cpu->cycles++; break;  // ADD
+    case 0x11: cpu->A -= cpu->B; cpu->cycles++; break;  // SUB
+    case 0x12: cpu->A &= cpu->B; cpu->cycles++; break;  // AND
+    case 0x13: cpu->A |= cpu->B; cpu->cycles++; break;  // OR
+    case 0x14: cpu->A ^= cpu->B; cpu->cycles++; break;  // XOR
+    case 0x15: cpu->A = ~cpu->A; cpu->cycles++; break;  // NOT
+    case 0x16: cpu->A = ~(cpu->A & cpu->B); cpu->cycles++; break;  // NAND
+    case 0x17: cpu->A = ~(cpu->A | cpu->B); cpu->cycles++; break;  // NOR
 
     case 0x20: {
         uint8_t hi = mem_read(cpu->PC++);
