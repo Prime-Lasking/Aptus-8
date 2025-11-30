@@ -11,21 +11,19 @@
 
 ### Instruction Set
 
-| Opcode | Mnemonic | Description | Example | Cycles |
+|| Opcode | Mnemonic | Description | Example | Cycles |
 |--------|----------|-------------|---------|--------|
-| 0x01   | mov reg imm  | Load immediate into reg | `0x01 0x42` → reg = 0x42 | 2 |
-| 0x10   | ADD      | A = A + B    | `0x10` → A = A + B | 1 |
-| 0x11   | SUB      | A = A - B    | `0x11` → A = A - B | 1 |
-| 0x12   | AND      | A = A & B    | `0x12` → A = A & B | 1 |
-| 0x13   | OR       | A = A | B    | `0x13` → A = A | B | 1 |
-| 0x14   | XOR      | A = A ^ B    | `0x14` → A = A ^ B | 1 |
-| 0x15   | NOT      | A = ~A       | `0x15` → A = ~A    | 1 |
-| 0x16   | NAND     | A = ~(A & B) | `0x16` → A = ~(A & B) | 1 |
-| 0x17   | NOR      | A = ~(A | B) | `0x17` → A = ~(A | B) | 1 |
-| 0x20   | JMP addr | Jump to address | `0x20 0x12 0x34` → PC = 0x1234 | 3 |
-| 0x30   | store reg addr | Store reg to memory | `0x30 reg 0x10` → [0x10] = reg | 3 |
-| 0x40   | PRINT addr| Print memory value | `0x40 0x10` → prints [0x10] | 4 |
-| 0xFF   | HALT     | Stop execution | `0xFF` → stops CPU | 1 |
+| 0x01   | mov reg, reg/imm8 | Copy 2nd operand to the 1st | `0x01 0x00 0x01` → A = B | 2-3 |
+| 0x10   | add reg/imm8 | A = A + src | `0x10 0x01` → A = A + B | 1-2 |
+| 0x11   | sub reg/imm8 | A = A - src | `0x11 0x01` → A = A - B | 1-2 |
+| 0x12   | and reg/imm8 | A = A & src | `0x12 0x01` → A = A & B | 1-2 |
+| 0x13   | or reg/imm8  | A = A | src | `0x13 0x01` → A = A | B | 1-2 |
+| 0x14   | xor reg/imm8 | A = A ^ src | `0x14 0x01` → A = A ^ B | 1-2 |
+| 0x15   | not          | A = ~A      | `0x15` → A = ~A    | 1 |
+| 0x16   | nand reg/imm8| A = ~(A & src) | `0x16 0x01` → A = ~(A & B) | 1-2 |
+| 0x17   | nor reg/imm8 | A = ~(A | src) | `0x17 0x01` → A = ~(A | B) | 1-2 |
+| 0x40   | print reg/imm8 | Print value | `0x40 0x01` → prints B | 3-4 |
+| 0xFF   | halt     | Stop execution | `0xFF` → stops CPU | 1 |
 
 ### Timing Model
 
@@ -34,13 +32,15 @@ Each instruction's cycle count is determined by:
 - **1 cycle** for each additional byte read/write
 - **1 cycle** for ALU operations
 - **1 cycle** for I/O operations (PRINT)
+- **1 cycle** for memory access (load/store)
 
 Example timing breakdown:
-- `mov a imm`: 2 cycles (1 opcode + 1 immediate byte)
-- `ADD`: 1 cycle (1 opcode, register operation)
-- `store b addr`: 3 cycles (1 opcode + 1 address byte + 1 memory write)
-- `PRINT addr`: 4 cycles (1 opcode + 1 address byte + 1 memory read + 1 I/O)
-
+- `mov A, B`: 2 cycles (1 opcode + 1 register)
+- `mov A, 0x42`: 3 cycles (1 opcode + 1 register + 1 immediate)
+- `add A, B`: 1 cycle (1 opcode, register operation)
+- `add A, 0x42`: 2 cycles (1 opcode + 1 immediate)
+- `print A`: 3 cycles (1 opcode + 1 register + 1 I/O)
+- `print 0x10`: 4 cycles (1 opcode + 1 immediate + 1 memory read + 1 I/O)
 ### Assembly Syntax
 
 #### Comments
