@@ -41,11 +41,11 @@ enum {
 // ---------------------------
 
 typedef struct {
-    uint8_t  A;         // accumulator
+    uint8_t  A;
     uint8_t  B;
     uint8_t  C;
-    uint16_t PC;        // program counter
-    uint64_t cycles;    // cycle counter for timing
+    uint16_t PC;
+    uint64_t cycles;
 } CPU;
 
 // Global 64 KB RAM
@@ -67,7 +67,6 @@ void mem_write(uint16_t addr, uint8_t val) {
 // Program Loader & Assembler
 // ---------------------------
 
-
 void dump_hex(const uint8_t *data, size_t len) {
     printf("Bytecode (%zu bytes):\n", len);
     for (size_t i = 0; i < len; i++) {
@@ -83,7 +82,7 @@ bool load_program_from_file(const char *path, uint16_t start, size_t *out_size) 
         fprintf(stderr, "Error: Unable to open '%s': %s\n", path, strerror(errno));
         return false;
     }
-    
+
     size_t max_bytes = (start < sizeof(RAM)) ? sizeof(RAM) - start : 0;
     if (max_bytes == 0) {
         fprintf(stderr, "Error: Start address 0x%04X is outside RAM range\n", start);
@@ -121,7 +120,6 @@ bool load_program_from_file(const char *path, uint16_t start, size_t *out_size) 
         while (*cursor && isspace((unsigned char)*cursor)) cursor++;
         if (!*cursor) break;
 
-        // Comments
         if (!in_comment && cursor[0]=='/' && cursor[1]=='/') {
             while (*cursor && *cursor!='\n') cursor++;
             continue;
@@ -141,7 +139,6 @@ bool load_program_from_file(const char *path, uint16_t start, size_t *out_size) 
             continue;
         }
 
-        // Parse mnemonic
         char mnemonic[16] = {0};
         const char *start_tok = cursor;
         while (*cursor && !isspace((unsigned char)*cursor) && (cursor - start_tok) < 15) {
@@ -149,7 +146,6 @@ bool load_program_from_file(const char *path, uint16_t start, size_t *out_size) 
             cursor++;
         }
 
-        // Lookup instruction
         const InstructionDef *instr = NULL;
         for (const InstructionDef *i = instructions; i->name; i++)
             if (strcasecmp(mnemonic, i->name) == 0) { instr = i; break; }
@@ -159,7 +155,6 @@ bool load_program_from_file(const char *path, uint16_t start, size_t *out_size) 
 
             while (*cursor && isspace((unsigned char)*cursor)) cursor++;
 
-            // ---- operand handling (patched) ----
             for (int op = 0; op < instr->operands; op++) {
                 if (!*cursor) { parsed_as_text = false; break; }
 
@@ -206,88 +201,72 @@ bool load_program_from_file(const char *path, uint16_t start, size_t *out_size) 
     if (out_size) *out_size = loaded;
     return true;
 }
-
 // ---------------------------
 // Instruction Execution
 // ---------------------------
-
+static inline uint8_t read_src_value(CPU *cpu, uint8_t src) {
+    switch (src) {
+        case REG_A: return cpu->A;
+        case REG_B: return cpu->B;
+        case REG_C: return cpu->C;
+        default:    return src;   // immediate
+    }
+} 
 void execute(CPU *cpu) {
     uint8_t opcode = mem_read(cpu->PC++);
 
     switch (opcode) {
 
-    // mov dest_reg, src(reg/immediate)
-    case 0x01: {
+    case 0x01: { // mov
         uint8_t dest_reg = mem_read(cpu->PC++);
         uint8_t src = mem_read(cpu->PC++);
-        uint8_t value;
-
-        if (src == REG_A || src == REG_B || src == REG_C) {
-            switch (src) {
-                case REG_A: value = cpu->A; break;
-                case REG_B: value = cpu->B; break;
-                case REG_C: value = cpu->C; break;
-                default: value = 0; break;
-            }
-        } else {
-            value = src; // use immediate as-is
-        }
+        uint8_t value = read_src_value(cpu, src);
 
         switch (dest_reg) {
             case REG_A: cpu->A = value; break;
             case REG_B: cpu->B = value; break;
             case REG_C: cpu->C = value; break;
-            default:
-                fprintf(stderr, "Invalid destination register %u\n", dest_reg);
-                break;
+            default: fprintf(stderr, "Invalid destination register %u\n", dest_reg); break;
         }
         cpu->cycles += 3;
         break;
     }
 
-    // Generic template for binary ops that take dest_reg, src
-    #define READ_SRC_VALUE(src_byte, out_val) \
-        do { \
-            uint8_t _s = (src_byte); \
-            if (_s == REG_A) (out_val) = cpu->A; \
-            else if (_s == REG_B) (out_val) = cpu->B; \
-            else if (_s == REG_C) (out_val) = cpu->C; \
-            else (out_val) = _s; \
-        } while (0)
-
-    case 0x10: {  // add dest, src
+    case 0x10: { // add
         uint8_t dest = mem_read(cpu->PC++);
         uint8_t src = mem_read(cpu->PC++);
-        uint8_t val;
-        READ_SRC_VALUE(src, val);
+        uint8_t val = read_src_value(cpu, src);
+
         switch (dest) {
-            case REG_A: cpu->A = (uint8_t)(cpu->A + val); break;
-            case REG_B: cpu->B = (uint8_t)(cpu->B + val); break;
-            case REG_C: cpu->C = (uint8_t)(cpu->C + val); break;
+            case REG_A: cpu->A = cpu->A + val; break;
+            case REG_B: cpu->B = cpu->B + val; break;
+            case REG_C: cpu->C = cpu->C + val; break;
             default: fprintf(stderr, "Invalid dest reg %u for ADD\n", dest); break;
         }
         cpu->cycles += 2;
         break;
     }
-    case 0x11: {  // sub dest, src
+
+    case 0x11: { // sub
         uint8_t dest = mem_read(cpu->PC++);
         uint8_t src = mem_read(cpu->PC++);
-        uint8_t val;
-        READ_SRC_VALUE(src, val);
+        uint8_t val = read_src_value(cpu, src);
+
         switch (dest) {
-            case REG_A: cpu->A = (uint8_t)(cpu->A - val); break;
-            case REG_B: cpu->B = (uint8_t)(cpu->B - val); break;
-            case REG_C: cpu->C = (uint8_t)(cpu->C - val); break;
+            case REG_A: cpu->A = cpu->A - val; break;
+            case REG_B: cpu->B = cpu->B - val; break;
+            case REG_C: cpu->C = cpu->C - val; break;
             default: fprintf(stderr, "Invalid dest reg %u for SUB\n", dest); break;
         }
         cpu->cycles += 2;
         break;
     }
-    case 0x12: {  // and dest, src
+
+    case 0x12: { // and
         uint8_t dest = mem_read(cpu->PC++);
         uint8_t src = mem_read(cpu->PC++);
-        uint8_t val;
-        READ_SRC_VALUE(src, val);
+        uint8_t val = read_src_value(cpu, src);
+
         switch (dest) {
             case REG_A: cpu->A &= val; break;
             case REG_B: cpu->B &= val; break;
@@ -297,11 +276,12 @@ void execute(CPU *cpu) {
         cpu->cycles += 2;
         break;
     }
-    case 0x13: {  // or dest, src
+
+    case 0x13: { // or
         uint8_t dest = mem_read(cpu->PC++);
         uint8_t src = mem_read(cpu->PC++);
-        uint8_t val;
-        READ_SRC_VALUE(src, val);
+        uint8_t val = read_src_value(cpu, src);
+
         switch (dest) {
             case REG_A: cpu->A |= val; break;
             case REG_B: cpu->B |= val; break;
@@ -311,11 +291,12 @@ void execute(CPU *cpu) {
         cpu->cycles += 2;
         break;
     }
-    case 0x14: {  // xor dest, src
+
+    case 0x14: { // xor
         uint8_t dest = mem_read(cpu->PC++);
         uint8_t src = mem_read(cpu->PC++);
-        uint8_t val;
-        READ_SRC_VALUE(src, val);
+        uint8_t val = read_src_value(cpu, src);
+
         switch (dest) {
             case REG_A: cpu->A ^= val; break;
             case REG_B: cpu->B ^= val; break;
@@ -325,7 +306,8 @@ void execute(CPU *cpu) {
         cpu->cycles += 2;
         break;
     }
-    case 0x15: {  // not reg
+
+    case 0x15: { // not
         uint8_t dest = mem_read(cpu->PC++);
         switch (dest) {
             case REG_A: cpu->A = ~cpu->A; break;
@@ -336,11 +318,12 @@ void execute(CPU *cpu) {
         cpu->cycles += 1;
         break;
     }
-    case 0x16: {  // nand dest, src
+
+    case 0x16: { // nand
         uint8_t dest = mem_read(cpu->PC++);
         uint8_t src = mem_read(cpu->PC++);
-        uint8_t val;
-        READ_SRC_VALUE(src, val);
+        uint8_t val = read_src_value(cpu, src);
+
         switch (dest) {
             case REG_A: cpu->A = ~(cpu->A & val); break;
             case REG_B: cpu->B = ~(cpu->B & val); break;
@@ -350,11 +333,12 @@ void execute(CPU *cpu) {
         cpu->cycles += 2;
         break;
     }
-    case 0x17: {  // nor dest, src
+
+    case 0x17: { // nor
         uint8_t dest = mem_read(cpu->PC++);
         uint8_t src = mem_read(cpu->PC++);
-        uint8_t val;
-        READ_SRC_VALUE(src, val);
+        uint8_t val = read_src_value(cpu, src);
+
         switch (dest) {
             case REG_A: cpu->A = ~(cpu->A | val); break;
             case REG_B: cpu->B = ~(cpu->B | val); break;
@@ -365,7 +349,7 @@ void execute(CPU *cpu) {
         break;
     }
 
-    case 0x30: {  // STORE reg, addr8
+    case 0x30: { // STORE
         uint8_t reg = mem_read(cpu->PC++);
         uint8_t addr = mem_read(cpu->PC++);
         switch (reg) {
@@ -380,32 +364,29 @@ void execute(CPU *cpu) {
         break;
     }
 
-    case 0x40: {  // PRINT operand (register or memory address)
+    case 0x40: { // PRINT
         uint8_t op = mem_read(cpu->PC++);
         if (op == REG_A || op == REG_B || op == REG_C) {
             uint8_t val = (op == REG_A) ? cpu->A : (op == REG_B) ? cpu->B : cpu->C;
             printf("%u\n", val);
         } else {
-            printf("%u\n", mem_read(op)); // print memory at address
+            printf("%u\n", mem_read(op));
         }
         cpu->cycles += 4;
         break;
     }
 
-    case 0xFF: {  // HALT
+    case 0xFF: { // HALT
         printf("System exited at PC=0x%04X after %" PRIu64 " cycles\n",
-            cpu->PC - 1, cpu->cycles);
-        cpu->cycles += 1;
+               cpu->PC - 1, cpu->cycles);
         exit(0);
     }
 
-    default: {
+    default:
         printf("Unknown opcode: 0x%02X at PC=0x%04X\n", opcode, cpu->PC - 1);
         exit(1);
     }
-    } // end switch
 }
-
 
 // ---------------------------
 // Main
@@ -415,15 +396,12 @@ int main(int argc, char **argv) {
     bool dump_only = false;
     const char *filename = NULL;
 
-    // Argument parsing
     if (argc == 2) {
         filename = argv[1];
-    }
-    else if (argc == 3 && strcmp(argv[1], "-S") == 0) {
+    } else if (argc == 3 && strcmp(argv[1], "-S") == 0) {
         dump_only = true;
         filename = argv[2];
-    }
-    else {
+    } else {
         fprintf(stderr, "Usage:\n");
         fprintf(stderr, "  %s program.asm         (assemble + run)\n", argv[0]);
         fprintf(stderr, "  %s -S program.asm      (assemble only, dump bytecode)\n",
@@ -431,20 +409,17 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // Load program
     size_t program_size = 0;
     if (!load_program_from_file(filename, 0x0000, &program_size))
         return 1;
 
     printf("Loaded '%s' (%zu bytes) into RAM\n", filename, program_size);
 
-    // If -S was used, print bytecode and exit
     if (dump_only) {
         dump_hex(RAM, program_size);
         return 0;
     }
 
-    // Otherwise execute normally
     CPU cpu = {0};
     cpu.PC = 0;
 
