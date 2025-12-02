@@ -14,6 +14,8 @@
 || Opcode | Mnemonic | Description | Example | Cycles |
 |--------|----------|-------------|---------|--------|
 | 0x01   | mov reg, reg/imm8 | Copy 2nd operand to the 1st | `0x01 0x00 0x01` → A = B | 2-3 |
+| 0x08   | div reg/imm8 | A = A / src | `0x08 0x01` → A = A / B | 1-2 |
+| 0x09   | mul reg/imm8 | A = A * src | `0x09 0x01` → A = A * B | 1-2 |
 | 0x10   | add reg/imm8 | A = A + src | `0x10 0x01` → A = A + B | 1-2 |
 | 0x11   | sub reg/imm8 | A = A - src | `0x11 0x01` → A = A - B | 1-2 |
 | 0x12   | and reg/imm8 | A = A & src | `0x12 0x01` → A = A & B | 1-2 |

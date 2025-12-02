@@ -18,6 +18,8 @@ static const InstructionDef instructions[] = {
     {"mov", 0x01, 2},  // mov reg, reg/imm8
     {"add", 0x10, 2},  // add reg, reg/imm8
     {"sub", 0x11, 2},  // sub reg reg/imm8
+    {"mul", 0x09, 2},  // mul reg reg/imm8
+    {"div", 0x08, 2},  // div reg reg/imm8
     {"and", 0x12, 2},  // and reg reg/imm8
     {"or",  0x13, 2},  // or reg reg/imm8
     {"xor", 0x14, 2},  // xor reg reg/imm8
@@ -229,6 +231,36 @@ void execute(CPU *cpu) {
             default: fprintf(stderr, "Invalid destination register %u\n", dest_reg); break;
         }
         cpu->cycles += 3;
+        break;
+    }
+
+    case 0x08: { // div
+        uint8_t dest = mem_read(cpu->PC++);
+        uint8_t src = mem_read(cpu->PC++);
+        uint8_t val = read_src_value(cpu, src);
+
+        switch (dest) {
+            case REG_A: cpu->A = cpu->A / val; break;
+            case REG_B: cpu->B = cpu->B / val; break;
+            case REG_C: cpu->C = cpu->C / val; break;
+            default: fprintf(stderr, "Invalid dest reg %u for div\n", dest); break;
+        }
+        cpu->cycles += 2;
+        break;
+    }
+
+    case 0x09: { // mul
+        uint8_t dest = mem_read(cpu->PC++);
+        uint8_t src = mem_read(cpu->PC++);
+        uint8_t val = read_src_value(cpu, src);
+
+        switch (dest) {
+            case REG_A: cpu->A = cpu->A * val; break;
+            case REG_B: cpu->B = cpu->B * val; break;
+            case REG_C: cpu->C = cpu->C * val; break;
+            default: fprintf(stderr, "Invalid dest reg %u for mul\n", dest); break;
+        }
+        cpu->cycles += 2;
         break;
     }
 
