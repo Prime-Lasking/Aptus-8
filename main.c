@@ -77,7 +77,15 @@ void dump_hex(const uint8_t *data, size_t len) {
     }
     if (len % 16 != 0) printf("\n");
 }
-
+int strcasecmp(const char *s1, const char *s2) {
+    while (*s1 && *s2) {
+        char c1 = tolower((unsigned char)*s1);
+        char c2 = tolower((unsigned char)*s2);
+        if (c1 != c2) return c1 - c2;
+        s1++; s2++;
+    }
+    return tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
+}
 bool load_program_from_file(const char *path, uint16_t start, size_t *out_size) {
     FILE *file = fopen(path, "rb");
     if (!file) {
@@ -213,7 +221,7 @@ static inline uint8_t read_src_value(CPU *cpu, uint8_t src) {
         case REG_C: return cpu->C;
         default:    return src;   // immediate
     }
-} 
+}
 void execute(CPU *cpu) {
     uint8_t opcode = mem_read(cpu->PC++);
 
