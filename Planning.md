@@ -5,7 +5,6 @@
 ### CPU Architecture
 
 * **Registers**:
-
   * `A`, `B`, `C`: 8-bit general purpose registers
   * `PC`: 16-bit program counter
 * **Memory**: 64KB addressable space (0x0000–0xFFFF)
@@ -32,21 +31,21 @@
 
 ### Instruction Set
 
-| Opcode | Mnemonic    | Operands | Description              | Example     | Cycles     |   |
-| -----: | ----------- | -------- | ------------------------ | ----------- | ---------- | - |
-|   0x01 | `mov d, s`  | 2        | Copy `s` into `d`        | `mov a, b`  | 3          |   |
-|   0x08 | `div d, s`  | 2        | `d = d / s`              | `div a, b`  | 10         |   |
-|   0x09 | `mul d, s`  | 2        | `d = d * s` (low 8 bits) | `mul a, b`  | 5          |   |
-|   0x10 | `add d, s`  | 2        | `d = d + s`              | `add a, b`  | 3          |   |
-|   0x11 | `sub d, s`  | 2        | `d = d - s`              | `sub a, b`  | 3          |   |
-|   0x12 | `and d, s`  | 2        | `d = d & s`              | `and a, b`  | 1          |   |
-|   0x13 | `or d, s`   | 2        | `d = d                   | s`          | `or a, b`  | 1 |
-|   0x14 | `xor d, s`  | 2        | `d = d ^ s`              | `xor a, b`  | 1          |   |
-|   0x15 | `not d`     | 1        | `d = ~d`                 | `not a`     | 1          |   |
-|   0x16 | `nand d, s` | 2        | `d = ~(d & s)`           | `nand a, b` | 2          |   |
-|   0x17 | `nor d, s`  | 2        | `d = ~(d                 | s)`         | `nor a, b` | 2 |
-|   0x40 | `print s`   | 1        | Print value              | `print a`   | 2          |   |
-|   0xFF | `halt`      | 0        | Stop execution           | `halt`      | 1          |   |
+| Opcode | Mnemonic    | Operands | Description              | Example     | Cycles |
+| ------ | ----------- | -------- | ------------------------ | ----------- | ------ |
+| 0x01   | `mov d, s`  | 2        | Copy `s` into `d`        | `mov a, b`  | 3      |
+| 0x08   | `div d, s`  | 2        | `d = d / s`              | `div a, b`  | 10     |
+| 0x09   | `mul d, s`  | 2        | `d = d * s` (low 8 bits) | `mul a, b`  | 5      |
+| 0x10   | `add d, s`  | 2        | `d = d + s`              | `add a, b`  | 3      |
+| 0x11   | `sub d, s`  | 2        | `d = d - s`              | `sub a, b`  | 3      |
+| 0x12   | `and d, s`  | 2        | `d = d & s`              | `and a, b`  | 1      |
+| 0x13   | `or d, s`   | 2        | `d = d \| s`             | `or a, b`   | 1      |
+| 0x14   | `xor d, s`  | 2        | `d = d ^ s`              | `xor a, b`  | 1      |
+| 0x15   | `not d`     | 1        | `d = ~d`                 | `not a`     | 1      |
+| 0x16   | `nand d, s` | 2        | `d = ~(d & s)`           | `nand a, b` | 2      |
+| 0x17   | `nor d, s`  | 2        | `d = ~(d \| s)`          | `nor a, b`  | 2      |
+| 0x40   | `print s`   | 1        | Print value              | `print a`   | 2      |
+| 0xFF   | `halt`      | 0        | Stop execution           | `halt`      | 1      |
 
 ---
 
