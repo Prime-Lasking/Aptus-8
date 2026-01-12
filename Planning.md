@@ -146,24 +146,24 @@ print a
 
 * **I/O System**
 
-  * Keyboard input
-  * Display output
-  * Sound
+  * [ ] Keyboard input
+  * [ ] Display output
+  * [ ] Sound
 
 * **Extended Registers**
 
-  * Additional 8-bit registers
-  * 16-bit register pairs
+  * [ ] Additional 8-bit registers
+  * [ ] 16-bit register pairs
 
 * **Bit Operations**
 
-  * AND, OR, XOR, NOT, NAND, NOR
-  * Shifts and rotates
-  * Bit test instructions
+  * [x] AND, OR, XOR, NOT, NAND, NOR
+  * [ ] Shifts and rotates
+  * [ ] Bit test instructions
 
 * **Debugging Tools**
 
-  * Disassembler
-  * Single-step execution
-  * Memory viewer
-  * Register watch
+  * [ ] Disassembler
+  * [ ] Single-step execution
+  * [ ] Memory viewer
+  * [ ] Register watch
