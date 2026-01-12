@@ -5,7 +5,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"unicode"
 )
 
 //
@@ -18,40 +17,14 @@ func strcasecmp(a, b string) bool {
 	return strings.EqualFold(a, b)
 }
 
-func strtol(s string, base int) (int64, int) {
-	i := 0
-	for i < len(s) && unicode.IsSpace(rune(s[i])) {
-		i++
+func parseInt(s string) (int64, error) {
+	s = strings.TrimSpace(s)
+	base := 10
+	if strings.HasPrefix(s, "0x") || strings.HasPrefix(s, "0X") {
+		base = 16
+		s = s[2:]
 	}
-
-	start := i
-
-	if base == 0 {
-		if strings.HasPrefix(s[i:], "0x") || strings.HasPrefix(s[i:], "0X") {
-			base = 16
-			i += 2
-		} else if strings.HasPrefix(s[i:], "0") && i+1 < len(s) {
-			base = 8
-			i++
-		} else {
-			base = 10
-		}
-	}
-
-	for i < len(s) {
-		c := s[i]
-		if unicode.IsDigit(rune(c)) || unicode.IsLetter(rune(c)) || c == '-' || c == '+' {
-			i++
-		} else {
-			break
-		}
-	}
-
-	val, err := strconv.ParseInt(s[start:i], base, 64)
-	if err != nil {
-		return 0, start
-	}
-	return val, i
+	return strconv.ParseInt(s, base, 64)
 }
 
 //
@@ -78,14 +51,19 @@ var instructionSet = []Instruction{
 	{"not", 0x15, 1},
 	{"nand", 0x16, 2},
 	{"nor", 0x17, 2},
+	{"cmp", 0x18, 2},
 	{"print", 0x40, 1},
+	{"jmp", 0x20, 1},
+	{"jz", 0x21, 1},
+	{"jnz", 0x22, 1},
 	{"halt", 0xFF, 0},
 }
 
 const (
-	REG_A = 0
-	REG_B = 1
-	REG_C = 2
+	REG_A   = 0
+	REG_B   = 1
+	REG_C   = 2
+	REG_CMP = 3
 )
 
 //
@@ -95,9 +73,9 @@ const (
 //
 
 type CPU struct {
-	A, B, C byte
-	PC      uint16
-	Cycles  uint64
+	A, B, C, CMP byte
+	PC           uint16
+	Cycles       uint64
 }
 
 var RAM [65536]byte
@@ -118,84 +96,78 @@ func loadProgram(filename string, start uint16) (int, error) {
 		return 0, err
 	}
 
-	src := string(data)
-	pos := 0
-	inComment := false
+	lines := strings.Split(string(data), "\n")
+	labels := make(map[string]byte)
+
+	// ---------- First pass (labels) ----------
+	addr := byte(start)
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "//") {
+			continue
+		}
+		if strings.HasSuffix(line, ":") {
+			labels[strings.ToLower(strings.TrimSuffix(line, ":"))] = addr
+			continue
+		}
+
+		parts := strings.FieldsFunc(line, func(r rune) bool {
+			return r == ' ' || r == '\t' || r == ',' || r == ';'
+		})
+
+		for _, ins := range instructionSet {
+			if strcasecmp(parts[0], ins.Name) {
+				addr += byte(1 + ins.Operands)
+				break
+			}
+		}
+	}
+
+	// ---------- Second pass (emit) ----------
 	var output []byte
 
-	for pos < len(src) {
-		for pos < len(src) && unicode.IsSpace(rune(src[pos])) {
-			pos++
-		}
-		if pos >= len(src) {
-			break
-		}
-
-		if !inComment && strings.HasPrefix(src[pos:], "//") {
-			for pos < len(src) && src[pos] != '\n' {
-				pos++
-			}
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "//") || strings.HasSuffix(line, ":") {
 			continue
 		}
 
-		if !inComment && strings.HasPrefix(src[pos:], "/*") {
-			inComment = true
-			pos += 2
-			continue
-		}
-
-		if inComment && strings.HasPrefix(src[pos:], "*/") {
-			inComment = false
-			pos += 2
-			continue
-		}
-
-		if inComment {
-			pos++
-			continue
-		}
-
-		startTok := pos
-		for pos < len(src) && !unicode.IsSpace(rune(src[pos])) {
-			pos++
-		}
-		mnemonic := src[startTok:pos]
+		parts := strings.FieldsFunc(line, func(r rune) bool {
+			return r == ' ' || r == '\t' || r == ',' || r == ';'
+		})
 
 		var instr *Instruction
 		for i := range instructionSet {
-			if strcasecmp(mnemonic, instructionSet[i].Name) {
+			if strcasecmp(parts[0], instructionSet[i].Name) {
 				instr = &instructionSet[i]
 				break
 			}
 		}
-
 		if instr == nil {
-			return 0, fmt.Errorf("unknown instruction: %s", mnemonic)
+			return 0, fmt.Errorf("unknown instruction: %s", parts[0])
 		}
 
 		output = append(output, instr.Opcode)
 
 		for i := 0; i < instr.Operands; i++ {
-			for pos < len(src) && unicode.IsSpace(rune(src[pos])) {
-				pos++
-			}
-
-			c := unicode.ToLower(rune(src[pos]))
-			if c == 'a' || c == 'b' || c == 'c' {
-				reg := map[rune]byte{'a': REG_A, 'b': REG_B, 'c': REG_C}[c]
-				output = append(output, reg)
-				pos++
-			} else {
-				val, next := strtol(src[pos:], 0)
-				output = append(output, byte(val)|0x80)
-				pos += next
-			}
-
-			for pos < len(src) && unicode.IsSpace(rune(src[pos])) {
-				pos++
-			}
-			if pos < len(src) && src[pos] == ',' {
-				pos++
+			op := strings.ToLower(parts[i+1])
+			switch op {
+			case "a":
+				output = append(output, REG_A)
+			case "b":
+				output = append(output, REG_B)
+			case "c":
+				output = append(output, REG_C)
+			default:
+				if lbl, ok := labels[op]; ok {
+					output = append(output, lbl)
+				} else {
+					v, err := parseInt(op)
+					if err != nil {
+						return 0, err
+					}
+					output = append(output, byte(v)|0x80)
+				}
 			}
 		}
 	}
@@ -221,125 +193,93 @@ func readSrc(cpu *CPU, src byte) byte {
 		return cpu.B
 	case REG_C:
 		return cpu.C
-	default:
-		return src
+	case REG_CMP:
+		return cpu.CMP
 	}
+	return src
 }
 
-func writeReg(cpu *CPU, reg byte, val byte) {
-	switch reg {
+func writeReg(cpu *CPU, r byte, v byte) {
+	switch r {
 	case REG_A:
-		cpu.A = val
+		cpu.A = v
 	case REG_B:
-		cpu.B = val
+		cpu.B = v
 	case REG_C:
-		cpu.C = val
+		cpu.C = v
+	case REG_CMP:
+		if v != 0 {
+			cpu.CMP = 1
+		} else {
+			cpu.CMP = 0
+		}
 	}
 }
 
-func execute(cpu *CPU) {
+func execute(cpu *CPU) bool {
 	op := memRead(cpu.PC)
 	cpu.PC++
 
 	switch op {
 
 	case 0x01: // mov
-		d := memRead(cpu.PC)
-		s := memRead(cpu.PC + 1)
+		d, s := memRead(cpu.PC), memRead(cpu.PC+1)
 		cpu.PC += 2
 		writeReg(cpu, d, readSrc(cpu, s))
-		cpu.Cycles += 3
 
 	case 0x10: // add
-		d := memRead(cpu.PC)
-		s := memRead(cpu.PC + 1)
+		d, s := memRead(cpu.PC), memRead(cpu.PC+1)
 		cpu.PC += 2
 		writeReg(cpu, d, readSrc(cpu, d)+readSrc(cpu, s))
-		cpu.Cycles += 3
 
 	case 0x11: // sub
-		d := memRead(cpu.PC)
-		s := memRead(cpu.PC + 1)
+		d, s := memRead(cpu.PC), memRead(cpu.PC+1)
 		cpu.PC += 2
 		writeReg(cpu, d, readSrc(cpu, d)-readSrc(cpu, s))
-		cpu.Cycles += 3
 
-	case 0x09: // mul
-		d := memRead(cpu.PC)
-		s := memRead(cpu.PC + 1)
+	case 0x18: // cmp
+		a, b := memRead(cpu.PC), memRead(cpu.PC+1)
 		cpu.PC += 2
-		res := uint16(readSrc(cpu, d)) * uint16(readSrc(cpu, s))
-		writeReg(cpu, d, byte(res))
-		cpu.Cycles += 5
-
-	case 0x08: // div
-		d := memRead(cpu.PC)
-		s := memRead(cpu.PC + 1)
-		cpu.PC += 2
-		div := readSrc(cpu, s)
-		if div == 0 {
-			fmt.Println("division by zero")
-			os.Exit(1)
+		if readSrc(cpu, a) == readSrc(cpu, b) {
+			cpu.CMP = 0
+		} else {
+			cpu.CMP = 1
 		}
-		writeReg(cpu, d, readSrc(cpu, d)/div)
-		cpu.Cycles += 10
 
-	case 0x12: // and
-		d := memRead(cpu.PC)
-		s := memRead(cpu.PC + 1)
-		cpu.PC += 2
-		writeReg(cpu, d, readSrc(cpu, d)&readSrc(cpu, s))
-		cpu.Cycles++
+	case 0x20: // jmp
+		cpu.PC = uint16(memRead(cpu.PC))
 
-	case 0x13: // or
-		d := memRead(cpu.PC)
-		s := memRead(cpu.PC + 1)
-		cpu.PC += 2
-		writeReg(cpu, d, readSrc(cpu, d)|readSrc(cpu, s))
-		cpu.Cycles++
+	case 0x21: // jz
+		addr := memRead(cpu.PC)
+		if cpu.CMP == 0 {
+			cpu.PC = uint16(addr)
+		} else {
+			cpu.PC++
+		}
 
-	case 0x14: // xor
-		d := memRead(cpu.PC)
-		s := memRead(cpu.PC + 1)
-		cpu.PC += 2
-		writeReg(cpu, d, readSrc(cpu, d)^readSrc(cpu, s))
-		cpu.Cycles++
-
-	case 0x15: // not
-		d := memRead(cpu.PC)
-		cpu.PC++
-		writeReg(cpu, d, ^readSrc(cpu, d))
-		cpu.Cycles++
-
-	case 0x16: // nand
-		d := memRead(cpu.PC)
-		s := memRead(cpu.PC + 1)
-		cpu.PC += 2
-		writeReg(cpu, d, ^(readSrc(cpu, d) & readSrc(cpu, s)))
-		cpu.Cycles += 2
-
-	case 0x17: // nor
-		d := memRead(cpu.PC)
-		s := memRead(cpu.PC + 1)
-		cpu.PC += 2
-		writeReg(cpu, d, ^(readSrc(cpu, d) | readSrc(cpu, s)))
-		cpu.Cycles += 2
+	case 0x22: // jnz
+		addr := memRead(cpu.PC)
+		if cpu.CMP != 0 {
+			cpu.PC = uint16(addr)
+		} else {
+			cpu.PC++
+		}
 
 	case 0x40: // print
 		o := memRead(cpu.PC)
 		cpu.PC++
 		fmt.Println(readSrc(cpu, o))
-		cpu.Cycles += 2
 
 	case 0xFF: // halt
-		cpu.Cycles++
 		fmt.Printf("Total cycles: %d\n", cpu.Cycles)
-		os.Exit(0)
+		return false
 
 	default:
-		fmt.Printf("Unknown opcode %02X at PC=%04X\n", op, cpu.PC-1)
-		os.Exit(1)
+		panic(fmt.Sprintf("bad opcode %02X", op))
 	}
+
+	cpu.Cycles++
+	return true
 }
 
 //
@@ -371,16 +311,12 @@ func main() {
 	if dump {
 		for i := 0; i < size; i++ {
 			fmt.Printf("%02X ", RAM[i])
-			if (i+1)%16 == 0 {
-				fmt.Println()
-			}
 		}
 		fmt.Println()
 		return
 	}
 
 	cpu := CPU{}
-	for {
-		execute(&cpu)
+	for execute(&cpu) {
 	}
 }
