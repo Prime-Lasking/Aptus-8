@@ -36,26 +36,25 @@
 
 ### Instruction Set
 
-| Opcode | Mnemonic    | Operands | Description                 | Example     | Cycles     |   |
-| -----: | ----------- | -------- | --------------------------- | ----------- | ---------- | - |
-|   0x01 | `mov d, s`  | 2        | Copy `s` into `d`           | `mov a, b`  | 1          |   |
-|   0x08 | `div d, s`  | 2        | `d = d / s`                 | `div a, b`  | 1          |   |
-|   0x09 | `mul d, s`  | 2        | `d = d * s` (low 8 bits)    | `mul a, b`  | 1          |   |
-|   0x10 | `add d, s`  | 2        | `d = d + s`                 | `add a, b`  | 1          |   |
-|   0x11 | `sub d, s`  | 2        | `d = d - s`                 | `sub a, b`  | 1          |   |
-|   0x12 | `and d, s`  | 2        | `d = d & s`                 | `and a, b`  | 1          |   |
-|   0x13 | `or d, s`   | 2        | `d = d                      | s`          | `or a, b`  | 1 |
-|   0x14 | `xor d, s`  | 2        | `d = d ^ s`                 | `xor a, b`  | 1          |   |
-|   0x15 | `not d`     | 1        | `d = ~d`                    | `not a`     | 1          |   |
-|   0x16 | `nand d, s` | 2        | `d = ~(d & s)`              | `nand a, b` | 1          |   |
-|   0x17 | `nor d, s`  | 2        | `d = ~(d                    | s)`         | `nor a, b` | 1 |
-|   0x18 | `cmp a, b`  | 2        | Set `CMP` based on equality | `cmp a, b`  | 1          |   |
-|   0x20 | `jmp addr`  | 1        | Unconditional jump          | `jmp loop`  | 1          |   |
-|   0x21 | `jz addr`   | 1        | Jump if `CMP == 0`          | `jz done`   | 1          |   |
-|   0x22 | `jnz addr`  | 1        | Jump if `CMP != 0`          | `jnz loop`  | 1          |   |
-|   0x40 | `print s`   | 1        | Print value                 | `print a`   | 1          |   |
-|   0xFF | `halt`      | 0        | Stop execution              | `halt`      | 1          |   |
-
+| Opcode | Mnemonic    | Operands | Description              | Example     | Cycles |
+| ------ | ----------- | -------- | ------------------------ | ----------- | ------ |
+| 0x01   | `mov d, s`  | 2        | Copy `s` into `d`        | `mov a, b`  | 2      |
+| 0x08   | `div d, s`  | 2        | `d = d / s`              | `div a, b`  | 10     |
+| 0x09   | `mul d, s`  | 2        | `d = d * s` (low 8 bits) | `mul a, b`  | 6      |
+| 0x10   | `add d, s`  | 2        | `d = d + s`              | `add a, b`  | 3      |
+| 0x11   | `sub d, s`  | 2        | `d = d - s`              | `sub a, b`  | 3      |
+| 0x12   | `and d, s`  | 2        | `d = d & s`              | `and a, b`  | 3      |
+| 0x13   | `or d, s`   | 2        | `d = d \| s`             | `or a, b`   | 3      |
+| 0x14   | `xor d, s`  | 2        | `d = d ^ s`              | `xor a, b`  | 3      |
+| 0x15   | `not d`     | 1        | `d = ~d`                 | `not a`     | 2      |
+| 0x16   | `nand d, s` | 2        | `d = ~(d & s)`           | `nand a, b` | 3      |
+| 0x17   | `nor d, s`  | 2        | `d = ~(d \| s)`          | `nor a, b`  | 3      |
+| 0x18   | `cmp a, b`  | 2        | Set CMP flag if equal    | `cmp a, b`  | 3      |
+| 0x20   | `jmp addr`  | 1        | Jump unconditionally     | `jmp 10`    | 3      |
+| 0x21   | `jz addr`   | 1        | Jump if CMP == 0         | `jz 10`     | 2–3    |
+| 0x22   | `jnz addr`  | 1        | Jump if CMP != 0         | `jnz 10`    | 2–3    |
+| 0x40   | `print s`   | 1        | Print value              | `print a`   | 3      |
+| 0xFF   | `halt`      | 0        | Stop execution           | `halt`      | 1      |
 ---
 
 ### Comparison Semantics
@@ -131,39 +130,143 @@ print a
 
 ---
 
-## Notes
+## Cycle Breakdown (Detailed)
 
-* Immediate values are limited to 7 bits due to encoding
-* Arithmetic wraps on overflow
-* Division by zero halts execution with an error
-* Jump targets must reside within `0x00–0xFF`
+The Aptus-8 uses a **simple fetch–decode–execute model**. Cycle counts are **explicit**, but they loosely map to realistic hardware stages.
+
+### General Rules
+
+* **Instruction fetch**: 1 cycle
+* **Each operand fetch**: 1 cycle
+* **ALU work**: varies by operation
+* **Write-back**: usually included in ALU cost
+* **Branches**:
+
+  * Taken branch avoids PC increment
+  * Not-taken branch incurs extra cycle
 
 ---
 
-## Future Development
+### Instruction Timing Breakdown
 
-### Planned Features
+#### `mov d, s` (2 cycles)
 
-* **I/O System**
+| Stage          | Cycles |
+| -------------- | ------ |
+| Fetch opcode   | 1      |
+| Fetch operands | 1      |
+| Register write | 0      |
 
-  * [ ] Keyboard input
-  * [ ] Display output
-  * [ ] Sound
+---
 
-* **Extended Registers**
+#### `add d, s` / `sub d, s` (3 cycles)
 
-  * [ ] Additional 8-bit registers
-  * [ ] 16-bit register pairs
+| Stage          | Cycles |
+| -------------- | ------ |
+| Fetch opcode   | 1      |
+| Fetch operands | 1      |
+| ALU add/sub    | 1      |
 
-* **Bit Operations**
+---
 
-  * [x] AND, OR, XOR, NOT, NAND, NOR
-  * [ ] Shifts and rotates
-  * [ ] Bit test instructions
+#### `and / or / xor / nand / nor` (3 cycles)
 
-* **Debugging Tools**
+| Stage           | Cycles |
+| --------------- | ------ |
+| Fetch opcode    | 1      |
+| Fetch operands  | 1      |
+| Logic operation | 1      |
 
-  * [ ] Disassembler
-  * [ ] Single-step execution
-  * [ ] Memory viewer
-  * [ ] Register watch
+---
+
+#### `not d` (2 cycles)
+
+| Stage          | Cycles |
+| -------------- | ------ |
+| Fetch opcode   | 1      |
+| Bitwise invert | 1      |
+
+---
+
+#### `mul d, s` (6 cycles)
+
+| Stage            | Cycles |
+| ---------------- | ------ |
+| Fetch opcode     | 1      |
+| Fetch operands   | 1      |
+| Multiply (iter.) | 4      |
+
+> Models a small shift-and-add multiplier.
+
+---
+
+#### `div d, s` (10 cycles)
+
+| Stage          | Cycles |
+| -------------- | ------ |
+| Fetch opcode   | 1      |
+| Fetch operands | 1      |
+| Divide (iter.) | 8      |
+
+> Division by zero traps immediately.
+
+---
+
+#### `cmp a, b` (3 cycles)
+
+| Stage          | Cycles |
+| -------------- | ------ |
+| Fetch opcode   | 1      |
+| Fetch operands | 1      |
+| Compare & flag | 1      |
+
+---
+
+#### `jmp addr` (3 cycles)
+
+| Stage         | Cycles |
+| ------------- | ------ |
+| Fetch opcode  | 1      |
+| Fetch address | 1      |
+| PC load       | 1      |
+
+---
+
+#### `jz / jnz addr` (2–3 cycles)
+
+**Taken branch:** 2 cycles
+
+| Stage         | Cycles |
+| ------------- | ------ |
+| Fetch opcode  | 1      |
+| Fetch address | 1      |
+
+**Not taken:** +1 cycle for PC advance
+
+---
+
+#### `print s` (3 cycles)
+
+| Stage         | Cycles |
+| ------------- | ------ |
+| Fetch opcode  | 1      |
+| Fetch operand | 1      |
+| I/O dispatch  | 1      |
+
+---
+
+#### `halt` (1 cycle)
+
+| Stage        | Cycles |
+| ------------ | ------ |
+| Fetch opcode | 1      |
+
+---
+
+## Notes
+
+* Cycle timing is **deterministic** and VM-enforced
+* No pipelining or overlap is modeled
+* Arithmetic wraps on overflow
+* Immediate values are limited to 7 bits due to encoding
+* Division by zero halts execution with an error
