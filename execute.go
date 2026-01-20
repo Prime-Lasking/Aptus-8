@@ -54,6 +54,18 @@ func execute(cpu *CPU, trace bool) bool {
 		writeReg(cpu, d, readSrc(cpu, d)/div)
 		cpu.Cycles += 10 // very slow op
 
+	case 0x06: // inc
+		d := memRead(cpu.PC)
+		cpu.PC++
+		writeReg(cpu, d, readSrc(cpu, d)+1)
+		cpu.Cycles += 2
+
+	case 0x07: // dec
+		d := memRead(cpu.PC)
+		cpu.PC++
+		writeReg(cpu, d, readSrc(cpu, d)-1)
+		cpu.Cycles += 2
+
 	// --------------------
 	// Bitwise
 	// --------------------

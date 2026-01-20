@@ -12,6 +12,8 @@ var instructionSet = []Instruction{
 	{"sub", 0x11, 2},
 	{"mul", 0x09, 2},
 	{"div", 0x08, 2},
+	{"inc", 0x06, 1},
+	{"dec", 0x07, 1},
 	{"and", 0x12, 2},
 	{"or", 0x13, 2},
 	{"xor", 0x14, 2},

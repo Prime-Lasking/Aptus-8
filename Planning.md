@@ -41,6 +41,8 @@
 | 0x01   | `mov d, s`  | 2        | Copy `s` into `d`        | `mov a, b`  | 2      |
 | 0x08   | `div d, s`  | 2        | `d = d / s`              | `div a, b`  | 10     |
 | 0x09   | `mul d, s`  | 2        | `d = d * s` (low 8 bits) | `mul a, b`  | 6      |
+| 0x06   | `inc d`     | 1        | `d = d + 1`              | `inc a`     | 2      |
+| 0x07   | `dec d`     | 1        | `d = d - 1`              | `dec a`     | 2      |
 | 0x10   | `add d, s`  | 2        | `d = d + s`              | `add a, b`  | 3      |
 | 0x11   | `sub d, s`  | 2        | `d = d - s`              | `sub a, b`  | 3      |
 | 0x12   | `and d, s`  | 2        | `d = d & s`              | `and a, b`  | 3      |
@@ -156,6 +158,15 @@ The Aptus-8 uses a **simple fetch–decode–execute model**. Cycle counts are *
 | Fetch opcode   | 1      |
 | Fetch operands | 1      |
 | Register write | 0      |
+
+---
+
+#### `inc d` / `dec d` (2 cycles)
+
+| Stage          | Cycles |
+| -------------- | ------ |
+| Fetch opcode   | 1      |
+| Register write | 1      |
 
 ---
 
